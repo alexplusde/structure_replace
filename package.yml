@@ -1,0 +1,11 @@
+package: structure_replace
+version: '1.0.0'
+author: alexplusde
+supportpage: https://github.com/alexplusde
+
+requires:
+  redaxo: '>=5.18.0, <6.0'
+  packages:
+    structure: '*'
+
+load: late

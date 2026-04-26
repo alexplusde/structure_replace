@@ -1,0 +1,3 @@
+<?php
+
+// Nichts zu tun.
