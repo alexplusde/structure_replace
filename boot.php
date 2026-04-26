@@ -13,9 +13,21 @@ if (!rex::isBackend()) {
     return;
 }
 
-rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $ep): array {
+/**
+ * Experimentell: nur Admins erhalten die Strukturseiten-Ersetzung.
+ */
+$structureReplaceIsAdmin = static function (): bool {
+    $user = rex::getUser();
+    return $user instanceof rex_user && $user->isAdmin();
+};
+
+rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): array {
     /** @var array<string, rex_be_page> $pages */
     $pages = $ep->getSubject();
+
+    if (!$structureReplaceIsAdmin()) {
+        return $pages;
+    }
 
     if (isset($pages['structure']) && $pages['structure'] instanceof rex_be_page_main) {
         $pages['structure']->setPath(
@@ -28,9 +40,9 @@ rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $
 });
 
 // Assets nur auf der Strukturseite (nicht auf Subpages) einbinden.
-rex_extension::register('PAGE_HEADER', static function (rex_extension_point $ep): string {
+rex_extension::register('PAGE_HEADER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): string {
     $page = rex_be_controller::getCurrentPage();
-    if ($page !== 'structure') {
+    if ($page !== 'structure' || !$structureReplaceIsAdmin()) {
         return (string) $ep->getSubject();
     }
 
