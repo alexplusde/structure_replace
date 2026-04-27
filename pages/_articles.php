@@ -141,19 +141,21 @@ $sortHeader = static function (string $key, string $label) use ($sort, $sortDir,
 <?php
 // =================== ARTIKEL-TABELLE ===================
 ?>
-<div class="card rex-sr-card">
-    <div class="card-header d-flex align-items-center gap-2">
+<div class="rex-sr-pane">
+    <div class="rex-sr-pane-header">
         <strong class="me-auto"><i class="rex-icon rex-icon-article"></i> <?= rex_i18n::msg('structure_replace_articles') ?></strong>
         <?php if (!$dndActive): ?>
             <a class="btn btn-sm btn-link" href="<?= rex_escape($ctxUrl->getUrl(['sort' => 'priority', 'sort_dir' => 'asc'], false)) ?>" title="<?= rex_i18n::msg('structure_replace_reset_sort') ?>"><i class="rex-icon fa-arrows-up-down"></i> <?= rex_i18n::msg('structure_replace_enable_dnd') ?></a>
         <?php endif; ?>
         <?php if ($perms['addArt'] && $perms['hasCatPerm'] && $categoryId > 0): ?>
-            <a class="btn btn-sm btn-primary" href="<?= rex_escape($ctxUrl->getUrl(['function' => 'add_art'], false)) ?>"><i class="rex-icon rex-icon-add-article"></i> <?= rex_i18n::msg('article_add') ?></a>
+            <a class="btn btn-sm btn-secondary" href="<?= rex_escape($ctxUrl->getUrl(['function' => 'add_art'], false)) ?>"><i class="rex-icon rex-icon-add-article"></i> <?= rex_i18n::msg('article_add') ?></a>
         <?php endif; ?>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 rex-sr-art-table" data-dnd-active="<?= $dndActive ? '1' : '0' ?>">
+    <div class="rex-sr-pane-body p-0">
+        <div class="card rex-sr-card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 rex-sr-art-table" data-dnd-active="<?= $dndActive ? '1' : '0' ?>">
             <thead>
                 <tr>
                     <th class="rex-sr-col-handle" scope="col" aria-label=""></th>
@@ -243,7 +245,9 @@ $sortHeader = static function (string $key, string $label) use ($sort, $sortDir,
                 endforeach;
             endif;
             ?>
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+            </div>
+        </div>
     </div>
 </div>

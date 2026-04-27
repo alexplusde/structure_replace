@@ -34,6 +34,14 @@ rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $
             rex_addon::get('structure_replace')->getPath('pages/structure_replace.php'),
         );
         $pages['structure']->setTitle(rex_i18n::msg('structure_replace_articles'));
+
+        // Be_plus-Container der Strukturseite auf "container-fluid" zwingen,
+        // damit die Verwaltung die volle Breite einnehmen kann. setProperty
+        // ueberschreibt nur in-memory, package.yml des Core-Addons bleibt
+        // unangetastet.
+        if (rex_addon::get('be_plus')->isAvailable()) {
+            rex_addon::get('structure')->setProperty('be_plus_container_class', 'container-fluid');
+        }
     }
 
     return $pages;

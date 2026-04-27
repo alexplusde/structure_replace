@@ -179,6 +179,97 @@
         initIframeModal();
         initDuplicateModal();
         initMaximize();
+        initSplitter();
+    }
+
+    function initSplitter() {
+        var wrap = document.getElementById('rex-structure-replace');
+        if (!wrap || wrap.dataset.srSplitterBound === '1') return;
+        wrap.dataset.srSplitterBound = '1';
+
+        var splitter = wrap.querySelector('.rex-sr-splitter');
+        if (!splitter) return;
+
+        var STORAGE_KEY = 'rex_structure_replace_sidebar_width';
+        var COLLAPSE_THRESHOLD_REM = 9;
+        var MIN_REM = 3;
+        var MAX_PX_FACTOR = 0.6;
+        var rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+        function applyWidth(px, persist) {
+            var minPx = MIN_REM * rem;
+            var maxPx = wrap.clientWidth * MAX_PX_FACTOR;
+            if (px < minPx) px = minPx;
+            if (px > maxPx) px = maxPx;
+            wrap.style.setProperty('--rex-sr-sidebar-width', px + 'px');
+            wrap.classList.toggle('is-narrow', px < COLLAPSE_THRESHOLD_REM * rem);
+            if (persist) {
+                try { localStorage.setItem(STORAGE_KEY, String(Math.round(px))); } catch (e) {}
+            }
+        }
+
+        // Initialwert aus localStorage
+        try {
+            var saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+            if (saved > 0) applyWidth(saved, false);
+            else applyWidth(22 * rem, false);
+        } catch (e) { applyWidth(22 * rem, false); }
+
+        var dragging = false;
+        var startX = 0;
+        var startW = 0;
+
+        function onMove(ev) {
+            if (!dragging) return;
+            var x = ev.touches ? ev.touches[0].clientX : ev.clientX;
+            var rect = wrap.getBoundingClientRect();
+            applyWidth(x - rect.left, false);
+            ev.preventDefault();
+        }
+        function onUp() {
+            if (!dragging) return;
+            dragging = false;
+            splitter.classList.remove('is-dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            // persist
+            var px = parseFloat(getComputedStyle(wrap).getPropertyValue('--rex-sr-sidebar-width')) || 0;
+            try { localStorage.setItem(STORAGE_KEY, String(Math.round(px))); } catch (e) {}
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onUp);
+        }
+        function onDown(ev) {
+            dragging = true;
+            startX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+            var rect = wrap.querySelector('.rex-sr-sidebar').getBoundingClientRect();
+            startW = rect.width;
+            splitter.classList.add('is-dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('touchend', onUp);
+            ev.preventDefault();
+        }
+        splitter.addEventListener('mousedown', onDown);
+        splitter.addEventListener('touchstart', onDown, { passive: false });
+        splitter.addEventListener('keydown', function (ev) {
+            var step = ev.shiftKey ? 4 * rem : rem;
+            var cur = parseFloat(getComputedStyle(wrap).getPropertyValue('--rex-sr-sidebar-width')) || (22 * rem);
+            if (ev.key === 'ArrowLeft') { applyWidth(cur - step, true); ev.preventDefault(); }
+            else if (ev.key === 'ArrowRight') { applyWidth(cur + step, true); ev.preventDefault(); }
+            else if (ev.key === 'Home') { applyWidth(MIN_REM * rem, true); ev.preventDefault(); }
+            else if (ev.key === 'End') { applyWidth(22 * rem, true); ev.preventDefault(); }
+        });
+        // Doppelklick: zwischen kollabiert und Default toggeln
+        splitter.addEventListener('dblclick', function () {
+            var cur = parseFloat(getComputedStyle(wrap).getPropertyValue('--rex-sr-sidebar-width')) || 0;
+            if (cur < COLLAPSE_THRESHOLD_REM * rem) applyWidth(22 * rem, true);
+            else applyWidth(MIN_REM * rem, true);
+        });
     }
 
     function initTreeChevron() {

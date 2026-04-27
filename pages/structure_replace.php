@@ -80,11 +80,12 @@ if (in_array($function, ['add_cat', 'edit_cat', 'add_art', 'edit_art'], true)) {
 ?>
 <div class="rex-structure-replace" id="rex-structure-replace" data-current-category="<?= $categoryId ?>" data-clang="<?= $clang ?>" <?php if ($autoOpenModal): ?>data-auto-open="<?= rex_escape($autoOpenModal) ?>"<?php endif; ?>>
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="rex-sr-toasts" style="z-index:1090"></div>
-    <div class="row g-3">
-        <aside class="col-12 col-lg-4 rex-sr-sidebar" data-pane="sidebar">
+    <div class="rex-sr-layout">
+        <aside class="rex-sr-sidebar" data-pane="sidebar">
             <?php require __DIR__ . '/_sidebar.php'; ?>
         </aside>
-        <section class="col-12 col-lg-8 rex-sr-main" data-pane="main">
+        <div class="rex-sr-splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-label="<?= rex_i18n::msg('structure_replace_resize') ?>"></div>
+        <section class="rex-sr-main" data-pane="main">
             <?php require __DIR__ . '/_articles.php'; ?>
         </section>
     </div>

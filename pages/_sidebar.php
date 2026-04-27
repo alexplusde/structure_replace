@@ -130,17 +130,17 @@ $renderRow = static function (rex_category $cat, int $depth) use (&$renderRow, $
 };
 
 ?>
-<div class="card rex-sr-card">
-    <div class="card-header d-flex align-items-center gap-2">
-        <strong class="me-auto"><i class="rex-icon rex-icon-open-category"></i> <?= rex_i18n::msg('structure_replace_categories') ?></strong>
+<div class="rex-sr-pane">
+    <div class="rex-sr-pane-header">
+        <strong class="me-auto"><i class="rex-icon rex-icon-open-category"></i> <span class="rex-sr-pane-title-text"><?= rex_i18n::msg('structure_replace_categories') ?></span></strong>
         <?php if ($perms['addCat']): ?>
-            <a class="btn btn-sm btn-primary" href="<?= rex_escape($ctxUrl->getUrl(['function' => 'add_cat'], false)) ?>" title="<?= rex_i18n::msg('add_category') ?>"><i class="rex-icon rex-icon-add-category"></i> <?= rex_i18n::msg('add_category') ?></a>
+            <a class="btn btn-sm btn-secondary rex-sr-pane-action" href="<?= rex_escape($ctxUrl->getUrl(['function' => 'add_cat'], false)) ?>" title="<?= rex_i18n::msg('add_category') ?>" aria-label="<?= rex_i18n::msg('add_category') ?>"><i class="rex-icon rex-icon-add-category"></i><span class="rex-sr-btn-label"> <?= rex_i18n::msg('add_category') ?></span></a>
         <?php endif; ?>
         <button type="button" class="btn btn-sm btn-link" data-sr-toggle="maximize" title="<?= rex_i18n::msg('structure_replace_toggle_max') ?>" aria-label="<?= rex_i18n::msg('structure_replace_toggle_max') ?>">
             <i class="rex-icon fa-arrows-left-right-to-line"></i>
         </button>
     </div>
-    <div class="card-body p-2">
+    <div class="rex-sr-pane-body">
         <ul class="rex-sr-tree rex-sr-tree-root" data-parent-id="0">
             <?php
             $hasAny = false;
