@@ -22,6 +22,7 @@ structure_replace_duplicate_status_inherit = Status der Quelle übernehmen
 structure_replace_expand = öffnen…
 structure_replace_toggle_max = Sidebar maximieren
 structure_replace_resize = Spaltenbreite ändern
+structure_replace_actions = Aktionen
 structure_replace_reorder_error = Reihenfolge konnte nicht gespeichert werden.
 structure_replace_enable_dnd = Sortierung zurücksetzen (Drag&Drop)
 structure_replace_reset_sort = Sortierung zurücksetzen

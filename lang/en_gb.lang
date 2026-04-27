@@ -21,6 +21,7 @@ structure_replace_duplicate_status = Status for copy
 structure_replace_duplicate_status_inherit = Inherit status from source
 structure_replace_expand = expand…
 structure_replace_resize = Resize columns
+structure_replace_actions = Actions
 structure_replace_toggle_max = Maximize sidebar
 structure_replace_reorder_error = Could not save new order.
 structure_replace_enable_dnd = Reset sort (Drag&Drop)

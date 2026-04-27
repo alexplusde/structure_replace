@@ -37,6 +37,21 @@ if ($structurePerm->hasMountpoints()) {
     $rootCats = rex_category::getRootCategories(false, $clang);
 }
 
+// Wenn die Root nur genau eine Kategorie hat, diese (und ggf. ihre einzige
+// Tochter etc.) automatisch aufgeklappt darstellen, damit der Nutzer nicht
+// erst klicken muss.
+if (count($rootCats) === 1) {
+    $auto = $rootCats[array_key_first($rootCats)];
+    while ($auto instanceof rex_category) {
+        $pathIds[$auto->getId()] = true;
+        $autoChildren = $auto->getChildren(false);
+        if (count($autoChildren) !== 1) {
+            break;
+        }
+        $auto = $autoChildren[0];
+    }
+}
+
 /**
  * Rendert eine Kategorie-Zeile inkl. Kinder rekursiv.
  */
@@ -54,8 +69,8 @@ $renderRow = static function (rex_category $cat, int $depth) use (&$renderRow, $
     $expanded = isset($pathIds[$id]);
     $isCurrent = $id === $categoryId;
 
-    $status = $cat->isOnline() ? 1 : 0;
-    $statusType = $catStatusTypes[$status] ?? $catStatusTypes[1];
+    $status = (int) $cat->getValue('status');
+    $statusType = $catStatusTypes[$status] ?? ($catStatusTypes[$cat->isOnline() ? 1 : 0] ?? $catStatusTypes[0]);
 
     $name = $cat->getName();
     if ($name === '') {
@@ -64,28 +79,54 @@ $renderRow = static function (rex_category $cat, int $depth) use (&$renderRow, $
     $iconClass = $hasChildren ? 'rex-icon-category' : 'rex-icon-category-without-elements';
     $nameUrl = $ctxUrl->getUrl(['category_id' => $id, 'article_id' => 0], false);
 
-    // Aktionen
+    // Aktionen — fixe Slot-Reihenfolge: Status, Edit, Duplicate, Delete.
+    // Nicht verfuegbare Slots werden durch leere Platzhalter ersetzt, damit
+    // die Icons in allen Zeilen exakt buendig stehen.
+    $slotPlaceholder = '<span class="rex-sr-action-slot is-empty" aria-hidden="true"></span>';
     $actions = '';
-    if ($perms['editCat']) {
-        $editUrl = $ctxUrl->getUrl(['category_id' => $structureContext->getCategoryId(), 'edit_id' => $id, 'function' => 'edit_cat'], false);
-        $actions .= '<a href="' . rex_escape($editUrl) . '" class="btn btn-sm btn-link" title="' . rex_i18n::msg('change') . '" aria-label="' . rex_i18n::msg('change') . '"><i class="rex-icon rex-icon-edit"></i></a>' . "\n";
-    }
-    if ($smAvailable && $perms['editCat']) {
-        $actions .= '<button type="button" class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#rex-sr-dup-cat-modal" data-source-id="' . $id . '" data-source-name="' . rex_escape($name) . '" title="' . rex_escape(rex_i18n::msg('structure_replace_duplicate')) . '" aria-label="' . rex_escape(rex_i18n::msg('structure_replace_duplicate')) . '"><i class="rex-icon fa-copy"></i></button>' . "\n";
-    }
+
+    // Status (mit Label, immer Icon + Text)
     if ($perms['publishCat']) {
-        $actions .= '<div class="dropdown d-inline-block">'
-            . '<button class="btn btn-sm btn-link dropdown-toggle ' . rex_escape($statusType[1]) . '" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="' . rex_escape($statusType[0]) . '"><i class="rex-icon ' . rex_escape($statusType[2]) . '"></i></button>'
+        $actions .= '<div class="dropdown d-inline-block rex-sr-action-slot">'
+            . '<button class="btn btn-sm btn-link dropdown-toggle ' . rex_escape($statusType[1]) . '" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="' . rex_escape($statusType[0]) . '">'
+            . '<i class="rex-icon ' . rex_escape($statusType[2]) . '" aria-hidden="true"></i>'
+            . '<span class="rex-sr-status-label">' . rex_escape($statusType[0]) . '</span>'
+            . '</button>'
             . '<ul class="dropdown-menu dropdown-menu-end">';
         foreach ($catStatusTypes as $key => $t) {
             $url = $ctxUrl->getUrl(['category-id' => $id, 'cat_status' => $key] + rex_api_category_status::getUrlParams(), false);
             $actions .= "\n" . '<li><a class="dropdown-item ' . rex_escape($t[1]) . '" href="' . rex_escape($url) . '"><i class="rex-icon ' . rex_escape($t[2]) . '"></i> ' . rex_escape($t[0]) . '</a></li>';
         }
         $actions .= "\n" . '</ul></div>' . "\n";
+    } else {
+        // Read-only-Status: trotzdem Label + Icon ausgeben
+        $actions .= '<span class="rex-sr-action-slot ' . rex_escape($statusType[1]) . '" title="' . rex_escape($statusType[0]) . '">'
+            . '<i class="rex-icon ' . rex_escape($statusType[2]) . '" aria-hidden="true"></i>'
+            . '<span class="rex-sr-status-label">' . rex_escape($statusType[0]) . '</span>'
+            . '</span>' . "\n";
     }
+
+    // Edit
+    if ($perms['editCat']) {
+        $editUrl = $ctxUrl->getUrl(['category_id' => $structureContext->getCategoryId(), 'edit_id' => $id, 'function' => 'edit_cat'], false);
+        $actions .= '<a href="' . rex_escape($editUrl) . '" class="btn btn-sm btn-link rex-sr-action-slot" title="' . rex_i18n::msg('change') . '" aria-label="' . rex_i18n::msg('change') . '"><i class="rex-icon rex-icon-edit"></i></a>' . "\n";
+    } else {
+        $actions .= $slotPlaceholder . "\n";
+    }
+
+    // Duplicate
+    if ($smAvailable && $perms['editCat']) {
+        $actions .= '<button type="button" class="btn btn-sm btn-link rex-sr-action-slot" data-bs-toggle="modal" data-bs-target="#rex-sr-dup-cat-modal" data-source-id="' . $id . '" data-source-name="' . rex_escape($name) . '" title="' . rex_escape(rex_i18n::msg('structure_replace_duplicate')) . '" aria-label="' . rex_escape(rex_i18n::msg('structure_replace_duplicate')) . '"><i class="rex-icon fa-copy"></i></button>' . "\n";
+    } else {
+        $actions .= $slotPlaceholder . "\n";
+    }
+
+    // Delete
     if ($perms['deleteCat']) {
         $delUrl = $ctxUrl->getUrl(['category-id' => $id] + rex_api_category_delete::getUrlParams(), false);
-        $actions .= '<a href="' . rex_escape($delUrl) . '" data-confirm="' . rex_i18n::msg('structure_delete_all_clangs') . '" class="btn btn-sm btn-link text-danger" title="' . rex_i18n::msg('delete') . '" aria-label="' . rex_i18n::msg('delete') . '"><i class="rex-icon rex-icon-delete"></i></a>' . "\n";
+        $actions .= '<a href="' . rex_escape($delUrl) . '" data-confirm="' . rex_i18n::msg('structure_delete_all_clangs') . '" class="btn btn-sm btn-link text-danger rex-sr-action-slot" title="' . rex_i18n::msg('delete') . '" aria-label="' . rex_i18n::msg('delete') . '"><i class="rex-icon rex-icon-delete"></i></a>' . "\n";
+    } else {
+        $actions .= $slotPlaceholder . "\n";
     }
 
     // Toggle (Bootstrap Collapse)

@@ -55,8 +55,8 @@
     cursor: col-resize;
     background: transparent;
     position: relative;
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
     flex-shrink: 0;
 }
 .rex-sr-splitter::before {
@@ -226,26 +226,63 @@
     opacity: 0;
     transition: opacity 0.15s;
     margin-left: auto;
+    align-items: center;
 }
 .rex-sr-row:hover .rex-sr-actions,
 .rex-sr-tree-item.is-current > .rex-sr-row .rex-sr-actions {
     opacity: 1;
 }
-.rex-sr-actions .btn {
-    padding: 0.1rem 0.35rem;
+/* Statusanzeige soll dauerhaft sichtbar bleiben (Slot 1 = Status). */
+.rex-sr-actions > .rex-sr-action-slot:first-child,
+.rex-sr-actions > .dropdown:first-child {
+    opacity: 1;
+}
+.rex-sr-actions .btn,
+.rex-sr-action-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.6rem;
+    min-width: 1.6rem;
+    padding: 0 0.35rem;
     line-height: 1;
     color: var(--rex-sr-muted);
     font-size: 0.8rem;
 }
+.rex-sr-actions .btn .rex-icon,
+.rex-sr-action-slot .rex-icon {
+    width: 1em;
+    text-align: center;
+    flex-shrink: 0;
+}
 .rex-sr-actions .btn:hover { color: var(--bs-body-color); }
 .rex-sr-actions .btn.text-danger:hover { color: var(--bs-danger, #dc3545) !important; }
 .rex-sr-actions .dropdown-toggle::after { display: none; }
+.rex-sr-action-slot.is-empty {
+    visibility: hidden;
+}
+/* Status-Label im Tree: kompakt, neben Icon */
+.rex-sr-actions .rex-sr-status-label {
+    margin-left: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+/* Status-Slot bekommt eigene Breite, damit Icon der Folge-Slots immer
+ * an gleicher Spaltenposition steht. */
+.rex-sr-actions > .dropdown:first-child .btn,
+.rex-sr-actions > .rex-sr-action-slot:first-child {
+    min-width: 6.5rem;
+    justify-content: flex-start;
+    padding: 0 0.4rem;
+}
 
 /* ===== Sidebar Icon-only-Modus =========================================== */
 .rex-structure-replace.is-narrow .rex-sr-pane-title-text,
 .rex-structure-replace.is-narrow .rex-sr-btn-label,
 .rex-structure-replace.is-narrow .rex-sr-id,
 .rex-structure-replace.is-narrow .rex-sr-actions,
+.rex-structure-replace.is-narrow .rex-sr-status-label,
 .rex-structure-replace.is-narrow .rex-sr-name span,
 .rex-structure-replace.is-narrow .rex-sr-handle {
     display: none !important;

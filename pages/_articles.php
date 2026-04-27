@@ -196,7 +196,6 @@ $sortHeader = static function (string $key, string $label) use ($sort, $sortDir,
                         </td>
                         <td class="rex-sr-col-id"><span class="badge text-bg-light text-muted">#<?= $id ?></span></td>
                         <td class="rex-sr-col-name">
-                            <i class="rex-icon <?= $iconClass ?>"></i>
                             <?php if ($canEdit): ?>
                                 <input type="text" class="form-control form-control-sm rex-sr-inline" data-sr-inline="art" data-sr-field="name" data-sr-id="<?= $id ?>" value="<?= rex_escape($art->getName()) ?>" maxlength="255" />
                             <?php else: ?>
@@ -219,7 +218,7 @@ $sortHeader = static function (string $key, string $label) use ($sort, $sortDir,
                         <td class="rex-sr-col-status">
                             <?php if ($perms['publishArt'] && $perms['hasCatPerm']): ?>
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-link dropdown-toggle <?= rex_escape($type[1]) ?>" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="<?= rex_escape($type[0]) ?>"><i class="rex-icon <?= rex_escape($type[2]) ?>"></i></button>
+                                    <button class="btn btn-sm btn-link dropdown-toggle <?= rex_escape($type[1]) ?>" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="<?= rex_escape($type[0]) ?>"><i class="rex-icon <?= rex_escape($type[2]) ?>" aria-hidden="true"></i> <span class="rex-sr-status-label"><?= rex_escape($type[0]) ?></span></button>
                                     <ul class="dropdown-menu dropdown-menu-end">
                                         <?php foreach ($artStatusTypes as $key => $t):
                                             $url = $ctxUrl->getUrl(['article_id' => $id, 'art_status' => $key] + rex_api_article_status::getUrlParams(), false);
@@ -229,16 +228,24 @@ $sortHeader = static function (string $key, string $label) use ($sort, $sortDir,
                                     </ul>
                                 </div>
                             <?php else: ?>
-                                <span class="<?= rex_escape($type[1]) ?>" title="<?= rex_escape($type[0]) ?>"><i class="rex-icon <?= rex_escape($type[2]) ?>"></i></span>
+                                <span class="<?= rex_escape($type[1]) ?>" title="<?= rex_escape($type[0]) ?>"><i class="rex-icon <?= rex_escape($type[2]) ?>" aria-hidden="true"></i> <span class="rex-sr-status-label"><?= rex_escape($type[0]) ?></span></span>
                             <?php endif; ?>
                         </td>
                         <td class="rex-sr-col-prio text-muted"><?= (int) $art->getPriority() ?></td>
                         <td class="rex-sr-col-updated text-muted small"><?= $updated > 0 ? rex_escape(rex_formatter::strftime($updated, 'date')) : '–' ?></td>
                         <td class="rex-sr-col-actions text-end">
-                            <a href="<?= rex_escape($editUrl) ?>" class="btn btn-sm btn-outline-primary"><i class="rex-icon rex-icon-edit-mode"></i> <?= rex_i18n::msg('structure_replace_edit_content') ?></a>
-                            <?php if ($perms['deleteArt'] && $perms['hasCatPerm']): ?>
-                                <a href="<?= rex_escape($delUrl) ?>" data-confirm="<?= rex_i18n::msg('structure_delete_all_clangs') ?>" class="btn btn-sm btn-link text-danger" title="<?= rex_i18n::msg('delete') ?>" aria-label="<?= rex_i18n::msg('delete') ?>"><i class="rex-icon rex-icon-delete"></i></a>
-                            <?php endif; ?>
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="<?= rex_i18n::msg('structure_replace_actions') ?>" title="<?= rex_i18n::msg('structure_replace_actions') ?>">
+                                    <i class="rex-icon fa-ellipsis-vertical" aria-hidden="true"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="<?= rex_escape($editUrl) ?>"><i class="rex-icon rex-icon-edit-mode"></i> <?= rex_i18n::msg('structure_replace_edit_content') ?></a></li>
+                                    <?php if ($perms['deleteArt'] && $perms['hasCatPerm']): ?>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="<?= rex_escape($delUrl) ?>" data-confirm="<?= rex_i18n::msg('structure_delete_all_clangs') ?>"><i class="rex-icon rex-icon-delete"></i> <?= rex_i18n::msg('delete') ?></a></li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
                         </td>
                     </tr>
             <?php
