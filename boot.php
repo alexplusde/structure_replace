@@ -48,16 +48,71 @@ rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $
 });
 
 // Assets nur auf der Strukturseite (nicht auf Subpages) einbinden.
+// Auf content/edit und structure/content laden wir lediglich die CSS, da
+// dort nur das Breadcrumb-Replacement benoetigt wird (BS5-Dropdowns liefert
+// be_plus, das JS der Strukturseite ist hier nicht relevant).
 rex_extension::register('PAGE_HEADER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): string {
     $page = rex_be_controller::getCurrentPage();
-    if ($page !== 'structure' || !$structureReplaceIsAdmin()) {
+    if (!$structureReplaceIsAdmin()) {
         return (string) $ep->getSubject();
     }
 
     $version = rex_addon::get('structure_replace')->getVersion();
-    $assets = '';
-    $assets .= '<link rel="stylesheet" type="text/css" href="' . rex_url::addonAssets('structure_replace', 'structure_replace.css') . '?v=' . $version . '">';
-    $assets .= '<script src="' . rex_url::addonAssets('structure_replace', 'structure_replace.js') . '?v=' . $version . '" defer></script>';
+    $cssTag = '<link rel="stylesheet" type="text/css" href="' . rex_url::addonAssets('structure_replace', 'structure_replace.css') . '?v=' . $version . '">';
 
-    return $ep->getSubject() . $assets;
+    if ($page === 'structure') {
+        $jsTag = '<script src="' . rex_url::addonAssets('structure_replace', 'structure_replace.js') . '?v=' . $version . '" defer></script>';
+        return $ep->getSubject() . $cssTag . $jsTag;
+    }
+
+    if (in_array($page, ['content/edit', 'structure/content'], true)) {
+        return $ep->getSubject() . $cssTag;
+    }
+
+    return (string) $ep->getSubject();
+});
+
+/**
+ * Ersetzt die Standard-Breadcrumb (Core-Structure-Addon) auf den
+ * Bearbeitungsseiten durch eine moderne Dropdown-Breadcrumb (BS5), mit der
+ * man innerhalb einer Kategorie zu Geschwister-Kategorien und innerhalb
+ * eines Artikels zu Geschwister-Artikeln springen kann.
+ */
+rex_extension::register('OUTPUT_FILTER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): string {
+    /** @var string $output */
+    $output = (string) $ep->getSubject();
+
+    if (!rex::isBackend() || !$structureReplaceIsAdmin()) {
+        return $output;
+    }
+
+    $page = rex_be_controller::getCurrentPage();
+    if (!in_array($page, ['content/edit', 'structure/content'], true)) {
+        return $output;
+    }
+
+    if (!str_contains($output, 'id="rex-js-structure-breadcrumb"')) {
+        return $output;
+    }
+
+    $articleId = rex_request('article_id', 'int');
+    $categoryId = rex_request('category_id', 'int');
+    $clang = rex_request('clang', 'int', rex_clang::getStartId());
+
+    if ($articleId > 0 && $categoryId <= 0) {
+        $art = rex_article::get($articleId, $clang);
+        if ($art) {
+            $categoryId = (int) $art->getCategoryId();
+        }
+    }
+
+    $replacement = rex_structure_replace_breadcrumb::render($categoryId, $articleId, $clang, true);
+    if ($replacement === '') {
+        return $output;
+    }
+
+    $pattern = '#<div\s+id="rex-js-structure-breadcrumb"[^>]*>.*?</div>#s';
+    $replaced = preg_replace($pattern, $replacement, $output, 1);
+
+    return is_string($replaced) ? $replaced : $output;
 });

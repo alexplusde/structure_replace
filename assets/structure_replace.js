@@ -25,6 +25,47 @@
         });
     }
 
+    function postReorderWithParent(bridge, kind, id, priority, parentId) {
+        var fd = new FormData();
+        fd.append('kind', kind);
+        fd.append('id', id);
+        fd.append('priority', priority);
+        fd.append('parent_id', parentId);
+        fd.append('clang', bridge.clang);
+        if (bridge.csrf) {
+            Object.keys(bridge.csrf).forEach(function (k) { fd.append(k, bridge.csrf[k]); });
+        }
+        return fetch(bridge.reorderUrl, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+    }
+
+    function postBulk(bridge, kind, action, ids, extra) {
+        var fd = new FormData();
+        fd.append('kind', kind);
+        fd.append('action', action);
+        fd.append('clang', bridge.clang);
+        ids.forEach(function (id) { fd.append('ids[]', id); });
+        if (extra && typeof extra === 'object') {
+            Object.keys(extra).forEach(function (k) { fd.append(k, extra[k]); });
+        }
+        if (bridge.csrf) {
+            Object.keys(bridge.csrf).forEach(function (k) { fd.append(k, bridge.csrf[k]); });
+        }
+        return fetch(bridge.bulkUrl, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (r) {
+            if (!r.ok) throw new Error('http ' + r.status);
+            return r.json();
+        });
+    }
+
     function postUpdate(bridge, kind, id, field, value, clang) {
         var fd = new FormData();
         fd.append('kind', kind);
@@ -76,15 +117,21 @@
         setTimeout(function () { box.remove(); }, 4000);
     }
 
-    function reindexPriorities(items, kind, bridge) {
+    function reindexPriorities(items, kind, bridge, parentId) {
         var requests = [];
         items.forEach(function (li, idx) {
             var newPrio = idx + 1;
             var oldPrio = parseInt(li.getAttribute('data-priority'), 10);
             var id = parseInt(li.getAttribute(kind === 'cat' ? 'data-cat-id' : 'data-art-id'), 10);
             if (!id) return;
-            if (newPrio === oldPrio) return;
             li.setAttribute('data-priority', String(newPrio));
+            // Wenn parentId uebergeben: pro Item einen "with parent" reorder-call schicken,
+            // damit der Server ggf. parent_id aktualisieren kann (Drag in andere Hierarchie).
+            if (typeof parentId === 'number' && parentId >= 0) {
+                requests.push(postReorderWithParent(bridge, kind, id, newPrio, parentId));
+                return;
+            }
+            if (newPrio === oldPrio) return;
             requests.push(postReorder(bridge, kind, id, newPrio));
         });
         return Promise.all(requests);
@@ -92,24 +139,98 @@
 
     function initSortableForList(ul, kind, bridge) {
         if (!window.Sortable || !ul) return;
+        // Kategorien teilen jetzt eine gemeinsame Drop-Gruppe ("sr-cats"),
+        // damit man Ordner per DnD in andere Eltern-Ordner verschieben kann.
+        var groupCfg;
+        if (kind === 'art') {
+            groupCfg = { name: 'arts', pull: true, put: true };
+        } else if (kind === 'cat') {
+            groupCfg = { name: 'sr-cats', pull: true, put: true };
+        }
         new window.Sortable(ul, {
             handle: '.rex-sr-handle',
             ghostClass: 'rex-sr-ghost',
             dragClass: 'rex-sr-drag',
             animation: 150,
             filter: '.is-startarticle, .is-locked',
-            onEnd: function () {
-                var items = Array.from(ul.children).filter(function (el) {
+            group: groupCfg,
+            onEnd: function (ev) {
+                var targetUl = ev.to;
+                var items = Array.from(targetUl.children).filter(function (el) {
                     return el.matches(kind === 'cat' ? '[data-cat-id]' : '[data-art-id]')
                         && !el.classList.contains('is-startarticle');
                 });
-                reindexPriorities(items, kind, bridge).then(function () {
+                var parentId = -1;
+                if (kind === 'cat' && targetUl.hasAttribute('data-parent-id')) {
+                    parentId = parseInt(targetUl.getAttribute('data-parent-id'), 10);
+                } else if (kind === 'art' && targetUl.hasAttribute('data-category-id')) {
+                    parentId = parseInt(targetUl.getAttribute('data-category-id'), 10);
+                }
+                var sourceChanged = ev.from !== ev.to;
+                reindexPriorities(items, kind, bridge, sourceChanged ? parentId : -1).then(function () {
                     showToast(bridge, true);
+                    if (sourceChanged && bridge.reloadUrl) {
+                        // Reload, da sich Hierarchie geaendert hat (URLs/Permissions/etc.).
+                        setTimeout(function () { window.location.href = bridge.reloadUrl; }, 400);
+                    }
                 }).catch(function () {
                     flashError(bridge.i18n && bridge.i18n.reorderError || 'Reorder failed');
                     showToast(bridge, false, bridge.i18n && bridge.i18n.reorderError);
                 });
             }
+        });
+    }
+
+    function initStartArticleDropZone(bridge) {
+        if (!window.Sortable || !bridge || !bridge.toStartUrl) return;
+        document.querySelectorAll('[data-sortable="startart"]').forEach(function (zone) {
+            if (zone.dataset.srBound === '1') return;
+            zone.dataset.srBound = '1';
+            new window.Sortable(zone, {
+                group: { name: 'arts', pull: false, put: ['arts'] },
+                animation: 150,
+                filter: '.is-startarticle',
+                onAdd: function (ev) {
+                    var dragged = ev.item;
+                    // Visuelle Aenderung sofort verwerfen — nach Erfolg laden wir die Seite neu.
+                    if (dragged && dragged.parentNode === zone) zone.removeChild(dragged);
+                    var artId = dragged ? parseInt(dragged.getAttribute('data-art-id'), 10) : 0;
+                    if (!artId) return;
+                    var msg = bridge.i18n && bridge.i18n.tostartConfirm;
+                    if (msg && !window.confirm(msg)) {
+                        // Drag rueckgaengig machen ueber Reload — Daten sind serverseitig nicht veraendert.
+                        if (bridge.reloadUrl) window.location.href = bridge.reloadUrl;
+                        return;
+                    }
+                    convertToStartarticle(bridge, artId);
+                }
+            });
+        });
+    }
+
+    function convertToStartarticle(bridge, articleId) {
+        var fd = new FormData();
+        fd.append('article_id', articleId);
+        fd.append('clang', bridge.clang);
+        if (bridge.csrf) {
+            Object.keys(bridge.csrf).forEach(function (k) { fd.append(k, bridge.csrf[k]); });
+        }
+        fetch(bridge.toStartUrl, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (r) {
+            if (!r.ok) throw new Error('http ' + r.status);
+            showToast(bridge, true, bridge.i18n && bridge.i18n.tostartOk);
+            // Reload, da sich Metadaten/Reihenfolge aendern.
+            setTimeout(function () {
+                if (bridge.reloadUrl) window.location.href = bridge.reloadUrl;
+                else window.location.reload();
+            }, 400);
+        }).catch(function () {
+            showToast(bridge, false, bridge.i18n && bridge.i18n.tostartFailed);
+            if (bridge.reloadUrl) window.location.href = bridge.reloadUrl;
         });
     }
 
@@ -173,6 +294,7 @@
     function init() {
         var bridge = getBridge();
         initSortable(bridge);
+        initStartArticleDropZone(bridge);
         initInlineEdit(bridge);
         initTreeChevron();
         autoOpenModal();
@@ -180,6 +302,102 @@
         initDuplicateModal();
         initMaximize();
         initSplitter();
+        initBulk(bridge);
+    }
+
+    function initBulk(bridge) {
+        if (!bridge || !bridge.bulkUrl) return;
+        var wrap = document.getElementById('rex-structure-replace');
+        if (!wrap || wrap.dataset.srBulkBound === '1') return;
+        wrap.dataset.srBulkBound = '1';
+
+        var bulkbar = wrap.querySelector('[data-rex-sr-bulkbar]');
+        var countEl = wrap.querySelector('[data-rex-sr-bulkcount]');
+        var toggleAll = wrap.querySelector('[data-rex-sr-bulk-toggle-all]');
+        if (!bulkbar) return;
+
+        function getRowChecks() {
+            return Array.from(wrap.querySelectorAll('[data-rex-sr-bulk-row]'));
+        }
+        function getSelected() {
+            return getRowChecks().filter(function (cb) { return cb.checked; });
+        }
+        function refresh() {
+            var sel = getSelected();
+            var n = sel.length;
+            if (countEl) {
+                var tpl = (bridge.i18n && bridge.i18n.bulkSelected) || '{n} selected';
+                countEl.textContent = tpl.replace('{n}', String(n));
+            }
+            bulkbar.classList.toggle('is-active', n > 0);
+            // Zeile visuell markieren
+            getRowChecks().forEach(function (cb) {
+                var tr = cb.closest('tr');
+                if (tr) tr.classList.toggle('is-bulk-selected', cb.checked);
+            });
+            if (toggleAll) {
+                var all = getRowChecks();
+                toggleAll.checked = n > 0 && n === all.length;
+                toggleAll.indeterminate = n > 0 && n < all.length;
+            }
+        }
+        function clearSelection() {
+            getRowChecks().forEach(function (cb) { cb.checked = false; });
+            refresh();
+        }
+
+        wrap.addEventListener('change', function (ev) {
+            var cb = ev.target.closest('[data-rex-sr-bulk-row]');
+            if (cb) { refresh(); return; }
+            if (ev.target === toggleAll) {
+                var checked = !!toggleAll.checked;
+                getRowChecks().forEach(function (c) { c.checked = checked; });
+                refresh();
+            }
+        });
+
+        wrap.addEventListener('click', function (ev) {
+            var btn = ev.target.closest('[data-rex-sr-bulk]');
+            if (!btn) return;
+            ev.preventDefault();
+            var action = btn.getAttribute('data-rex-sr-bulk');
+            if (action === 'clear') { clearSelection(); return; }
+            var ids = getSelected().map(function (cb) {
+                return parseInt(cb.getAttribute('data-art-id'), 10);
+            }).filter(function (n) { return n > 0; });
+            if (ids.length === 0) return;
+
+            if (action === 'delete') {
+                var tpl = (bridge.i18n && bridge.i18n.bulkDeleteConfirm) || 'Delete {n} items?';
+                if (!window.confirm(tpl.replace('{n}', String(ids.length)))) return;
+                postBulk(bridge, 'art', 'delete', ids).then(function (res) {
+                    showToast(bridge, !!res.ok);
+                    if (res.failed && res.failed.length && bridge.i18n && bridge.i18n.bulkSomeFailed) {
+                        flashError(bridge.i18n.bulkSomeFailed + ' (' + res.failed.join(', ') + ')');
+                    }
+                    setTimeout(function () {
+                        if (bridge.reloadUrl) window.location.href = bridge.reloadUrl;
+                    }, 400);
+                }).catch(function () {
+                    showToast(bridge, false);
+                });
+                return;
+            }
+            if (action === 'status') {
+                var status = parseInt(btn.getAttribute('data-rex-sr-status'), 10);
+                if (isNaN(status)) return;
+                postBulk(bridge, 'art', 'status', ids, { status: status }).then(function (res) {
+                    showToast(bridge, !!res.ok);
+                    setTimeout(function () {
+                        if (bridge.reloadUrl) window.location.href = bridge.reloadUrl;
+                    }, 400);
+                }).catch(function () {
+                    showToast(bridge, false);
+                });
+            }
+        });
+
+        refresh();
     }
 
     function initSplitter() {

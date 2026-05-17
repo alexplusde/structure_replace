@@ -59,6 +59,9 @@ echo rex_api_function::getMessage();
 $apiUrlParams = rex_api_structure_replace_reorder::getUrlParams();
 $bridge = [
     'reorderUrl' => rex_url::backendController(['rex-api-call' => 'structure_replace_reorder'], false),
+    'toStartUrl' => rex_url::backendController(['rex-api-call' => 'structure_replace_to_start'], false),
+    'bulkUrl' => rex_url::backendController(['rex-api-call' => 'structure_replace_bulk'], false),
+    'reloadUrl' => $ctxUrl->getUrl([], false),
     'clang' => $clang,
     'csrf' => [
         rex_csrf_token::PARAM => $apiUrlParams[rex_csrf_token::PARAM],
@@ -67,6 +70,15 @@ $bridge = [
         'reorderError' => rex_i18n::msg('structure_replace_reorder_error'),
         'saved' => rex_i18n::msg('structure_replace_saved'),
         'saveFailed' => rex_i18n::msg('structure_replace_save_failed'),
+        'tostartConfirm' => rex_i18n::msg('structure_replace_tostart_confirm'),
+        'tostartOk' => rex_i18n::msg('content_tostartarticle_ok'),
+        'tostartFailed' => rex_i18n::msg('content_tostartarticle_failed'),
+        'bulkSelected' => rex_i18n::msg('structure_replace_bulk_selected', '{n}'),
+        'bulkDelete' => rex_i18n::msg('structure_replace_bulk_delete'),
+        'bulkDeleteConfirm' => rex_i18n::msg('structure_replace_bulk_delete_confirm', '{n}'),
+        'bulkClear' => rex_i18n::msg('structure_replace_bulk_clear'),
+        'bulkStatus' => rex_i18n::msg('structure_replace_bulk_status'),
+        'bulkSomeFailed' => rex_i18n::msg('structure_replace_bulk_some_failed'),
     ],
 ];
 echo '<script type="application/json" id="structure-replace-bridge">' . json_encode($bridge, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . '</script>';
@@ -78,16 +90,20 @@ if (in_array($function, ['add_cat', 'edit_cat', 'add_art', 'edit_art'], true)) {
 }
 
 ?>
-<div class="rex-structure-replace" id="rex-structure-replace" data-current-category="<?= $categoryId ?>" data-clang="<?= $clang ?>" <?php if ($autoOpenModal): ?>data-auto-open="<?= rex_escape($autoOpenModal) ?>"<?php endif; ?>>
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="rex-sr-toasts" style="z-index:1090"></div>
-    <div class="rex-sr-layout">
-        <aside class="rex-sr-sidebar" data-pane="sidebar">
-            <?php require __DIR__ . '/_sidebar.php'; ?>
-        </aside>
-        <div class="rex-sr-splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-label="<?= rex_i18n::msg('structure_replace_resize') ?>"></div>
-        <section class="rex-sr-main" data-pane="main">
-            <?php require __DIR__ . '/_articles.php'; ?>
-        </section>
-    </div>
+<div class="rex-structure-replace" id="rex-structure-replace"
+	data-current-category="<?= $categoryId ?>"
+	data-clang="<?= $clang ?>" <?php if ($autoOpenModal): ?>data-auto-open="<?= rex_escape($autoOpenModal) ?>"<?php endif; ?>>
+	<div class="toast-container position-fixed bottom-0 end-0 p-3" id="rex-sr-toasts" style="z-index:1090"></div>
+	<div class="rex-sr-layout">
+		<aside class="rex-sr-sidebar" data-pane="sidebar">
+			<?php require __DIR__ . '/_sidebar.php'; ?>
+		</aside>
+		<div class="rex-sr-splitter" role="separator" aria-orientation="vertical" tabindex="0"
+			aria-label="<?= rex_i18n::msg('structure_replace_resize') ?>">
+		</div>
+		<section class="rex-sr-main" data-pane="main">
+			<?php require __DIR__ . '/_articles.php'; ?>
+		</section>
+	</div>
 </div>
 <?php require __DIR__ . '/_modals.php'; ?>

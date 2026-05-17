@@ -4,6 +4,12 @@
  * sekundaer, Icons dezent.
  */
 
+/* Core-Wrapper-Padding fuer diese Seite zuruecksetzen, damit der Layout-Grid
+ * den vollen Platz nutzen kann (analog Mediapool-Native). */
+#rex-page-structure .rex-page-main-inner {
+    padding: 0;
+}
+
 .rex-structure-replace {
     --rex-sr-sidebar-width: 22rem;
     --rex-sr-sidebar-min: 3rem;
@@ -22,7 +28,7 @@
     min-height: 60vh;
     background: var(--rex-sr-pane-bg);
     border: 1px solid var(--rex-sr-divider);
-    border-radius: 0.5rem;
+    border-radius: 0.375rem;
     overflow: hidden;
 }
 .rex-sr-sidebar,
@@ -36,8 +42,8 @@
     background: var(--rex-sr-pane-bg);
 }
 .rex-sr-main {
-    padding: 1rem;
-    background: var(--bs-tertiary-bg, #f8f9fa);
+    padding: 0.5rem;
+    background: var(--rex-sr-pane-bg);
     overflow: auto;
 }
 
@@ -103,22 +109,40 @@
 }
 .rex-sr-main .rex-sr-pane {
     background: var(--rex-sr-pane-bg);
-    border: 1px solid var(--rex-sr-divider);
-    border-radius: 0.5rem;
+    border: 0;
+    border-radius: 0;
     overflow: hidden;
+}
+.rex-sr-main .rex-sr-pane + .rex-sr-pane {
+    border-top: 1px solid var(--rex-sr-divider);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
 }
 .rex-sr-main .rex-sr-pane-body {
     padding: 0;
     background: var(--rex-sr-pane-bg);
 }
+.rex-sr-main .rex-sr-pane-header {
+    padding: 0.35rem 0.25rem;
+    border-bottom: 0;
+    min-height: auto;
+    background: transparent;
+}
+.rex-sr-main .rex-sr-card,
+.rex-sr-main .rex-sr-startcard {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    margin-bottom: 0;
+    box-shadow: none;
+}
 .rex-sr-startcard {
-    margin-bottom: 1rem;
-    border: 1px solid var(--rex-sr-divider);
-    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
     background: var(--rex-sr-pane-bg);
+    border-bottom: 1px solid var(--rex-sr-divider);
 }
 .rex-sr-startcard .card-body {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.25rem;
 }
 
 /* ===== Tree ============================================================== */
@@ -350,6 +374,7 @@
     border-color: var(--bs-border-color, #dee2e6);
 }
 .rex-sr-col-handle { width: 1.5rem; }
+.rex-sr-col-select { width: 2rem; padding-left: 0.25rem; padding-right: 0.25rem; }
 .rex-sr-col-id { width: 1%; white-space: nowrap; }
 .rex-sr-col-status, .rex-sr-col-prio, .rex-sr-col-updated { width: 1%; white-space: nowrap; }
 .rex-sr-col-actions { width: 1%; white-space: nowrap; }
@@ -376,9 +401,95 @@
     background: var(--bs-primary-bg-subtle, #cfe2ff);
 }
 
+/* ===== Bulk-Bar ========================================================== */
+.rex-sr-bulkbar.is-active {
+    display: inline-flex !important;
+}
+.rex-sr-art-table tbody tr.is-bulk-selected {
+    background: var(--bs-primary-bg-subtle, #cfe2ff);
+}
+
+/* ===== Folder-DnD: Drop-into-folder Highlight ============================ */
+.rex-sr-row.is-drop-into,
+.be-plus-media-rail-node.is-drop-cat-into {
+    outline: 2px solid var(--bs-primary, #0d6efd);
+    outline-offset: -2px;
+    background: var(--bs-primary-bg-subtle, #cfe2ff) !important;
+}
+
 /* ===== Mobile Fallback =================================================== */
 @media (max-width: 767.98px) {
     .rex-sr-layout { grid-template-columns: 1fr; }
     .rex-sr-splitter { display: none; }
     .rex-sr-sidebar { border-right: 0; border-bottom: 1px solid var(--rex-sr-divider); }
 }
+
+/* ===== Breadcrumb (Dropdown) =============================================
+ * Dropdown-Breadcrumb fuer structure_replace und page=content/edit. Klick
+ * auf das Caret oeffnet die Geschwister-Auswahl der jeweiligen Ebene.
+ */
+.rex-sr-breadcrumb-nav {
+    margin-bottom: 0.75rem;
+}
+.rex-sr-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    padding: 0.4rem 0.6rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border: 1px solid var(--rex-sr-divider, var(--bs-border-color-translucent, rgba(0,0,0,0.1)));
+    border-radius: 0.375rem;
+    list-style: none;
+    margin: 0;
+    font-size: 0.875rem;
+}
+.rex-sr-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+}
+.rex-sr-breadcrumb-item + .rex-sr-breadcrumb-item::before {
+    content: "/";
+    color: var(--bs-secondary-color, #6c757d);
+    padding: 0 0.4rem;
+}
+.rex-sr-breadcrumb-link {
+    color: var(--bs-body-color);
+    text-decoration: none;
+    padding: 0.15rem 0.25rem;
+    border-radius: 0.25rem;
+}
+.rex-sr-breadcrumb-link:hover,
+.rex-sr-breadcrumb-link:focus {
+    background: var(--bs-secondary-bg, #e9ecef);
+    color: var(--bs-emphasis-color);
+    text-decoration: none;
+}
+.rex-sr-breadcrumb-item.active > .rex-sr-breadcrumb-link {
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+}
+.rex-sr-breadcrumb-toggle {
+    padding: 0.1rem 0.35rem;
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.rex-sr-breadcrumb-toggle:hover,
+.rex-sr-breadcrumb-toggle:focus {
+    color: var(--bs-emphasis-color);
+    background: var(--bs-secondary-bg, #e9ecef);
+}
+.rex-sr-breadcrumb-toggle::after { display: none; }
+.rex-sr-breadcrumb-item .dropdown-menu {
+    max-height: 60vh;
+    overflow-y: auto;
+    min-width: 14rem;
+}
+.rex-sr-breadcrumb-item .dropdown-item .rex-icon {
+    margin-right: 0.4rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+.rex-sr-breadcrumb-item .dropdown-item.active .rex-icon { color: inherit; }

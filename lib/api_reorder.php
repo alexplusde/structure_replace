@@ -29,6 +29,8 @@ class rex_api_structure_replace_reorder extends rex_api_function
         $hasName = '' !== $name;
         $templateId = rex_post('template_id', 'int', -1);
         $hasTemplate = $templateId >= 0;
+        $parentId = rex_post('parent_id', 'int', -1);
+        $hasParent = $parentId >= 0;
 
         if ($id <= 0 || !rex_clang::exists($clang)) {
             throw new rex_api_exception('Invalid id/clang.');
@@ -45,6 +47,22 @@ class rex_api_structure_replace_reorder extends rex_api_function
             if (!$cat) {
                 throw new rex_api_exception('Category not found.');
             }
+
+            // Optional: Parent wechseln (Drag in andere Hierarchie).
+            if ($hasParent && $parentId !== (int) $cat->getParentId()) {
+                if ($parentId === $id) {
+                    throw new rex_api_exception('Cannot move category into itself.');
+                }
+                if ($parentId > 0 && !$user->getComplexPerm('structure')->hasCategoryPerm($parentId)) {
+                    throw new rex_api_exception('Missing perm for target parent.');
+                }
+                rex_category_service::moveCategory($id, $parentId);
+                $cat = rex_category::get($id, $clang);
+                if (!$cat) {
+                    throw new rex_api_exception('Category vanished after move.');
+                }
+            }
+
             $data = [
                 'catname' => $hasName ? $name : $cat->getName(),
                 'catpriority' => $priority > 0 ? $priority : $cat->getPriority(),
@@ -64,6 +82,19 @@ class rex_api_structure_replace_reorder extends rex_api_function
             if (!$user->getComplexPerm('structure')->hasCategoryPerm($art->getCategoryId())) {
                 throw new rex_api_exception('Missing structure perm.');
             }
+
+            // Optional: Artikel in andere Kategorie verschieben.
+            if ($hasParent && $parentId !== (int) $art->getCategoryId()) {
+                if ($parentId > 0 && !$user->getComplexPerm('structure')->hasCategoryPerm($parentId)) {
+                    throw new rex_api_exception('Missing perm for target parent.');
+                }
+                rex_article_service::moveArticle($id, (int) $art->getCategoryId(), $parentId);
+                $art = rex_article::get($id, $clang);
+                if (!$art) {
+                    throw new rex_api_exception('Article vanished after move.');
+                }
+            }
+
             $data = [
                 'name' => $hasName ? $name : $art->getName(),
                 'template_id' => $hasTemplate ? $templateId : $art->getTemplateId(),
