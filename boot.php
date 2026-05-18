@@ -21,11 +21,39 @@ $structureReplaceIsAdmin = static function (): bool {
     return $user instanceof rex_user && $user->isAdmin();
 };
 
-rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): array {
+// Wenn 2FA aktiv, aber noch nicht verifiziert ist, muss die OTP-Eingabe
+// Vorrang vor der ersetzten Strukturseite haben.
+$structureReplaceHasPendingTwoFactorAuth = static function (): bool {
+    if (!rex::isBackend() || null === rex::getUser()) {
+        return false;
+    }
+
+    if (!rex_addon::get('2factor_auth')->isAvailable()) {
+        return false;
+    }
+
+    if (!class_exists('FriendsOfREDAXO\\TwoFactorAuth\\one_time_password')) {
+        return false;
+    }
+
+    $otp = FriendsOfREDAXO\TwoFactorAuth\one_time_password::getInstance();
+
+    return $otp->isEnabled() && !$otp->isVerified();
+};
+
+rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin, $structureReplaceHasPendingTwoFactorAuth): array {
     /** @var array<string, rex_be_page> $pages */
     $pages = $ep->getSubject();
 
     if (!$structureReplaceIsAdmin()) {
+        return $pages;
+    }
+
+    if ($structureReplaceHasPendingTwoFactorAuth()) {
+        if ('structure' === rex_be_controller::getCurrentPagePart(1)) {
+            rex_be_controller::setCurrentPage('profile');
+        }
+
         return $pages;
     }
 
@@ -51,9 +79,9 @@ rex_extension::register('PAGES_PREPARED', static function (rex_extension_point $
 // Auf content/edit und structure/content laden wir lediglich die CSS, da
 // dort nur das Breadcrumb-Replacement benoetigt wird (BS5-Dropdowns liefert
 // be_plus, das JS der Strukturseite ist hier nicht relevant).
-rex_extension::register('PAGE_HEADER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): string {
+rex_extension::register('PAGE_HEADER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin, $structureReplaceHasPendingTwoFactorAuth): string {
     $page = rex_be_controller::getCurrentPage();
-    if (!$structureReplaceIsAdmin()) {
+    if (!$structureReplaceIsAdmin() || $structureReplaceHasPendingTwoFactorAuth()) {
         return (string) $ep->getSubject();
     }
 
@@ -78,11 +106,11 @@ rex_extension::register('PAGE_HEADER', static function (rex_extension_point $ep)
  * man innerhalb einer Kategorie zu Geschwister-Kategorien und innerhalb
  * eines Artikels zu Geschwister-Artikeln springen kann.
  */
-rex_extension::register('OUTPUT_FILTER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin): string {
+rex_extension::register('OUTPUT_FILTER', static function (rex_extension_point $ep) use ($structureReplaceIsAdmin, $structureReplaceHasPendingTwoFactorAuth): string {
     /** @var string $output */
     $output = (string) $ep->getSubject();
 
-    if (!rex::isBackend() || !$structureReplaceIsAdmin()) {
+    if (!rex::isBackend() || !$structureReplaceIsAdmin() || $structureReplaceHasPendingTwoFactorAuth()) {
         return $output;
     }
 
