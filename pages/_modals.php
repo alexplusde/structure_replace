@@ -254,8 +254,8 @@ if ($perms['hasCatPerm'] && $categoryId > 0) {
 
 if (rex_addon::get('structure_manager')->isAvailable() && $perms['hasCatPerm']) {
     $smCsrf = rex_csrf_token::factory('structure_manager');
-    $smTree = \FriendsOfRedaxo\StructureManager\StructureManager::getTree();
-    $smStatusOptions = \FriendsOfRedaxo\StructureManager\StructureManager::getAvailableStatusOptions();
+    $smTree = \Alexplusde\StructureManager\StructureManager::getTree();
+    $smStatusOptions = \Alexplusde\StructureManager\StructureManager::getAvailableStatusOptions();
     $smActionUrl = rex_url::backendPage('structure_manager/category', [], false);
 
     $renderTreeOptions = static function (array $items, int $level = 0) use (&$renderTreeOptions): string {
