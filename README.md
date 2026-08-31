@@ -51,3 +51,11 @@ werden.
 ## Deaktivieren
 
 AddOn deaktivieren – das Original `structure` greift sofort wieder.
+
+## Branch-Workflow
+
+- `main` ist geschützt. Direkte Pushes sind nicht möglich, Änderungen laufen ausschließlich
+  über Pull Requests.
+- Für jede Änderung einen Feature-Branch von `main` anlegen, zum Beispiel
+  `feature/neue-option`.
+- Der Feature-Branch wird per Pull Request nach `main` gemerged.
